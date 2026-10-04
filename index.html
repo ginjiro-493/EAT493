@@ -2,8 +2,9 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ごはん要否チェック</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>ごはん要否チェック（1週間）</title>
+
   <style>
     :root {
       --bg-color: #f4f6f8;
@@ -16,174 +17,351 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background-color: var(--bg-color);
       color: var(--text);
       margin: 0;
-      padding: 16px;
-      font-size: 18px; /* 全体的に文字を大きく設定 */
-      line-height: 1.6;
+      padding: 12px;
+      font-size: 18px;
     }
 
     .container {
-      max-width: 600px;
+      max-width: 1000px;
       margin: 0 auto;
     }
 
-    h1 {
-      font-size: 26px; /* タイトル拡大 */
-      text-align: center;
-      margin-bottom: 20px;
+    /* 日付ナビゲーション */
+    .date-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      padding: 14px 18px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+
+    .date-title {
+      font-size: 20px;
+      font-weight: bold;
       color: var(--primary);
     }
 
-    .member-card {
+    .nav-btn {
+      padding: 10px 18px;
+      font-size: 16px;
+      font-weight: bold;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #f8f9fa;
+      cursor: pointer;
+    }
+
+    /* 1週間一覧テーブル */
+    .table-container {
+      overflow-x: auto;
       background: var(--card-bg);
       border-radius: 12px;
-      padding: 18px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
       border: 1px solid var(--border);
+      padding: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
 
-    .member-name {
-      font-size: 22px; /* メンバー名拡大 */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 750px;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px 4px;
+      text-align: center;
+      font-size: 14px;
+      vertical-align: top;
+    }
+
+    th {
+      background-color: #f1f3f5;
+      font-size: 15px;
+      min-width: 95px;
+    }
+
+    .member-name-td {
+      font-size: 18px;
       font-weight: bold;
-      margin-bottom: 12px;
-      border-bottom: 2px solid var(--primary);
-      padding-bottom: 4px;
+      background: #fafafa;
+      width: 80px;
+      vertical-align: middle;
     }
 
-    .options {
+    /* メニュー入力欄（ヘッダー用） */
+    .menu-input-group {
+      margin-top: 6px;
       display: flex;
-      gap: 12px;
+      flex-direction: column;
+      gap: 4px;
     }
 
-    .btn {
-      flex: 1;
-      padding: 14px 8px;
-      font-size: 18px; /* ボタン文字拡大 */
+    .menu-input {
+      width: 95%;
+      padding: 4px;
+      font-size: 12px;
+      border: 1px solid #b0b0b0;
+      border-radius: 4px;
+      box-sizing: border-box;
+      background-color: #fff;
+    }
+
+    /* ワンタップ切替ボタン */
+    .toggle-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 40px;
+      font-size: 14px;
       font-weight: bold;
-      border: 2px solid var(--border);
       border-radius: 8px;
-      background-color: #f8f9fa;
-      color: var(--text);
+      border: 1px solid #ccc;
       cursor: pointer;
-      transition: all 0.2s ease;
+      user-select: none;
     }
 
-    .btn.active-eat {
+    .status-eat {
       background-color: var(--success);
       color: white;
       border-color: var(--success);
     }
 
-    .btn.active-no-eat {
+    .status-no-eat {
       background-color: var(--danger);
       color: white;
       border-color: var(--danger);
     }
 
-    .reset-container {
-      text-align: center;
-      margin-top: 24px;
+    .status-none {
+      background-color: #f8f9fa;
+      color: #777;
     }
 
-    .reset-btn {
-      background-color: #6c757d;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      font-size: 16px;
-      border-radius: 8px;
-      cursor: pointer;
+    /* 個人メモ入力欄 */
+    .note-input {
+      width: 95%;
+      padding: 3px;
+      font-size: 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      margin-top: 4px;
+      box-sizing: border-box;
+    }
+
+    .guide-text {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      margin-top: 12px;
     }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>🍚 ごはん要否チェック</h1>
-  <div id="members-list"></div>
+  <!-- 週切り替えナビゲーション -->
+  <div class="date-nav">
+    <button class="nav-btn" onclick="changeWeek(-1)">◀ 前週</button>
+    <div id="current-week-display" class="date-title"></div>
+    <button class="nav-btn" onclick="changeWeek(1)">次週 ▶</button>
+  </div>
 
-  <div class="reset-container">
-    <button class="reset-btn" onclick="resetAll()">選択をクリア</button>
+  <!-- 1週間入力用テーブル -->
+  <div class="table-container">
+    <table id="weekly-table"></table>
+  </div>
+
+  <div class="guide-text">
+    💡 日付の下に<b>「その日のメニュー」</b>を記入できます。<br>
+    💡 ボタンを押すと <b>「食べる ⭕」</b> ↔ <b>「いらない ❌」</b> が切り替わります。
   </div>
 </div>
 
 <script>
-  // 初期メンバーの設定
-  const initialMembers = ["ちち", "はは", "はる", "ゆい", "りな"];
+  var MEMBERS = ["ちち", "はは", "はる", "ゆい", "りな"];
+  var currentWeekStart = getMonday(new Date());
 
-  // 状態の読み込み（ローカルストレージ）
-  function loadState() {
-    const saved = localStorage.getItem('gohan_status');
-    if (saved) {
-      return JSON.parse(saved);
+  function getStorageData() {
+    try {
+      var data = localStorage.getItem('family_gohan_data');
+      return data ? JSON.parse(data) : {};
+    } catch(e) {
+      return {};
     }
-    const state = {};
-    initialMembers.forEach(m => state[m] = null);
-    return state;
   }
 
-  let state = loadState();
-
-  // 画面の描画
-  function render() {
-    const listEl = document.getElementById('members-list');
-    listEl.innerHTML = '';
-
-    initialMembers.forEach(member => {
-      const card = document.createElement('div');
-      card.className = 'member-card';
-
-      const nameEl = document.createElement('div');
-      nameEl.className = 'member-name';
-      nameEl.textContent = member;
-
-      const optionsEl = document.createElement('div');
-      optionsEl.className = 'options';
-
-      const eatBtn = document.createElement('button');
-      eatBtn.className = `btn ${state[member] === 'eat' ? 'active-eat' : ''}`;
-      eatBtn.textContent = '食べる ⭕';
-      eatBtn.onclick = () => setStatus(member, 'eat');
-
-      const noEatBtn = document.createElement('button');
-      noEatBtn.className = `btn ${state[member] === 'no-eat' ? 'active-no-eat' : ''}`;
-      noEatBtn.textContent = 'いらない ❌';
-      noEatBtn.onclick = () => setStatus(member, 'no-eat');
-
-      optionsEl.appendChild(eatBtn);
-      optionsEl.appendChild(noEatBtn);
-
-      card.appendChild(nameEl);
-      card.appendChild(optionsEl);
-
-      listEl.appendChild(card);
-    });
+  function saveStorageData(data) {
+    try {
+      localStorage.setItem('family_gohan_data', JSON.stringify(data));
+    } catch(e) {
+      console.error(e);
+    }
   }
 
-  // ステータスの更新と保存
-  function setStatus(member, status) {
-    if (state[member] === status) {
-      state[member] = null; // 同じボタンを押したら解除
+  function formatDateKey(d) {
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1);
+    if (m.length < 2) m = '0' + m;
+    var day = String(d.getDate());
+    if (day.length < 2) day = '0' + day;
+    return y + '-' + m + '-' + day;
+  }
+
+  function getMonday(d) {
+    var date = new Date(d);
+    var day = date.getDay();
+    var diff = date.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(date.setDate(diff));
+  }
+
+  function changeWeek(offset) {
+    currentWeekStart.setDate(currentWeekStart.getDate() + (offset * 7));
+    renderWeekly();
+  }
+
+  function toggleMeal(dateKey, member, meal) {
+    var data = getStorageData();
+    if (!data[dateKey]) data[dateKey] = {};
+    if (!data[dateKey][member]) data[dateKey][member] = { lunch: null, dinner: null, lunchNote: '', dinnerNote: '' };
+
+    var current = data[dateKey][member][meal];
+    if (current === 'eat') {
+      data[dateKey][member][meal] = 'no-eat';
     } else {
-      state[member] = status;
+      data[dateKey][member][meal] = 'eat';
     }
-    localStorage.setItem('gohan_status', JSON.stringify(state));
-    render();
+
+    saveStorageData(data);
+    renderWeekly();
   }
 
-  // クリア機能
-  function resetAll() {
-    initialMembers.forEach(m => state[m] = null);
-    localStorage.setItem('gohan_status', JSON.stringify(state));
-    render();
+  function updateMemberNote(dateKey, member, field, noteText) {
+    var data = getStorageData();
+    if (!data[dateKey]) data[dateKey] = {};
+    if (!data[dateKey][member]) data[dateKey][member] = { lunch: null, dinner: null, lunchNote: '', dinnerNote: '' };
+
+    data[dateKey][member][field] = noteText;
+    saveStorageData(data);
   }
 
-  // 初期実行
-  render();
+  function updateDayMenu(dateKey, field, menuText) {
+    var data = getStorageData();
+    if (!data[dateKey]) data[dateKey] = {};
+    if (!data[dateKey]._menu) data[dateKey]._menu = { lunch: '', dinner: '' };
+
+    data[dateKey]._menu[field] = menuText;
+    saveStorageData(data);
+  }
+
+  function renderWeekly() {
+    var table = document.getElementById('weekly-table');
+    if (!table) return;
+
+    var data = getStorageData();
+    var weekDates = [];
+    for (var i = 0; i < 7; i++) {
+      var d = new Date(currentWeekStart);
+      d.setDate(d.getDate() + i);
+      weekDates.push(d);
+    }
+
+    var startStr = (weekDates[0].getMonth() + 1) + '/' + weekDates[0].getDate();
+    var endStr = (weekDates[6].getMonth() + 1) + '/' + weekDates[6].getDate();
+    document.getElementById('current-week-display').textContent = startStr + ' 〜 ' + endStr;
+
+    var days = ['日', '月', '火', '水', '木', '金', '土'];
+    var html = '<thead><tr><th>メンバー</th>';
+
+    for (var i = 0; i < weekDates.length; i++) {
+      var d = weekDates[i];
+      var dateKey = formatDateKey(d);
+      var dayMenu = (data[dateKey] && data[dateKey]._menu) ? data[dateKey]._menu : { lunch: '', dinner: '' };
+      
+      html += '<th>' +
+        '<div>' + d.getDate() + '(' + days[d.getDay()] + ')</div>' +
+        '<div class="menu-input-group">' +
+          '<input type="text" class="menu-input" placeholder="昼メニュー" value="' + (dayMenu.lunch || '') + '" onchange="updateDayMenu(\'' + dateKey + '\', \'lunch\', this.value)">' +
+          '<input type="text" class="menu-input" placeholder="夜メニュー" value="' + (dayMenu.dinner || '') + '" onchange="updateDayMenu(\'' + dateKey + '\', \'dinner\', this.value)">' +
+        '</div>' +
+      '</th>';
+    }
+    html += '</tr></thead><tbody>';
+
+    for (var m = 0; m < MEMBERS.length; m++) {
+      var member = MEMBERS[m];
+      html += '<tr><td rowspan="2" class="member-name-td">' + member + '</td>';
+
+      // 昼食行
+      for (var i = 0; i < weekDates.length; i++) {
+        var d = weekDates[i];
+        var dateKey = formatDateKey(d);
+        var mData = (data[dateKey] && data[dateKey][member]) ? data[dateKey][member] : {};
+        var status = mData.lunch;
+        
+        var label = '未選択';
+        var cssClass = 'status-none';
+
+        if (status === 'eat') {
+          label = '食べる ⭕';
+          cssClass = 'status-eat';
+        } else if (status === 'no-eat') {
+          label = 'いらない ❌';
+          cssClass = 'status-no-eat';
+        }
+
+        html += '<td>' +
+          '<div style="font-size:11px; color:#666; margin-bottom:2px;">昼</div>' +
+          '<button class="toggle-btn ' + cssClass + '" onclick="toggleMeal(\'' + dateKey + '\', \'' + member + '\', \'lunch\')">' + label + '</button>' +
+          '<input type="text" class="note-input" placeholder="メモ" value="' + (mData.lunchNote || mData.note || '') + '" onchange="updateMemberNote(\'' + dateKey + '\', \'' + member + '\', \'lunchNote\', this.value)">' +
+        '</td>';
+      }
+      html += '</tr><tr>';
+
+      // 夕食行
+      for (var i = 0; i < weekDates.length; i++) {
+        var d = weekDates[i];
+        var dateKey = formatDateKey(d);
+        var mData = (data[dateKey] && data[dateKey][member]) ? data[dateKey][member] : {};
+        var status = mData.dinner;
+        
+        var label = '未選択';
+        var cssClass = 'status-none';
+
+        if (status === 'eat') {
+          label = '食べる ⭕';
+          cssClass = 'status-eat';
+        } else if (status === 'no-eat') {
+          label = 'いらない ❌';
+          cssClass = 'status-no-eat';
+        }
+
+        html += '<td>' +
+          '<div style="font-size:11px; color:#666; margin-bottom:2px;">夜</div>' +
+          '<button class="toggle-btn ' + cssClass + '" onclick="toggleMeal(\'' + dateKey + '\', \'' + member + '\', \'dinner\')">' + label + '</button>' +
+          '<input type="text" class="note-input" placeholder="メモ" value="' + (mData.dinnerNote || '') + '" onchange="updateMemberNote(\'' + dateKey + '\', \'' + member + '\', \'dinnerNote\', this.value)">' +
+        '</td>';
+      }
+      html += '</tr>';
+    }
+
+    html += '</tbody>';
+    table.innerHTML = html;
+  }
+
+  // 画面読み込み完了時に実行
+  window.onload = function() {
+    renderWeekly();
+  };
 </script>
 
 </body>
