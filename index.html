@@ -142,11 +142,6 @@
       border-color: var(--danger);
     }
 
-    .status-none {
-      background-color: #f8f9fa;
-      color: #777;
-    }
-
     /* 個人メモ入力欄 */
     .note-input {
       width: 95%;
@@ -182,8 +177,8 @@
   </div>
 
   <div class="guide-text">
-    💡 日付の下に<b>「その日のメニュー」</b>を記入できます。<br>
-    💡 ボタンを押すと <b>「食べる ⭕」</b> ↔ <b>「いらない ❌」</b> が切り替わります。
+    💡 デフォルトは全項目<b>「食べる ⭕」</b>に設定されています。<br>
+    💡 タップすると <b>「食べる ⭕」</b> ↔ <b>「いらない ❌」</b> が交互に切り替わります。
   </div>
 </div>
 
@@ -232,13 +227,15 @@
   function toggleMeal(dateKey, member, meal) {
     var data = getStorageData();
     if (!data[dateKey]) data[dateKey] = {};
-    if (!data[dateKey][member]) data[dateKey][member] = { lunch: null, dinner: null, lunchNote: '', dinnerNote: '' };
+    if (!data[dateKey][member]) data[dateKey][member] = { lunch: 'eat', dinner: 'eat', lunchNote: '', dinnerNote: '' };
 
-    var current = data[dateKey][member][meal];
-    if (current === 'eat') {
-      data[dateKey][member][meal] = 'no-eat';
-    } else {
+    // デフォルトが'eat'のため、未設定の場合も'eat'として扱う
+    var current = data[dateKey][member][meal] || 'eat';
+    
+    if (current === 'no-eat') {
       data[dateKey][member][meal] = 'eat';
+    } else {
+      data[dateKey][member][meal] = 'no-eat';
     }
 
     saveStorageData(data);
@@ -248,7 +245,7 @@
   function updateMemberNote(dateKey, member, field, noteText) {
     var data = getStorageData();
     if (!data[dateKey]) data[dateKey] = {};
-    if (!data[dateKey][member]) data[dateKey][member] = { lunch: null, dinner: null, lunchNote: '', dinnerNote: '' };
+    if (!data[dateKey][member]) data[dateKey][member] = { lunch: 'eat', dinner: 'eat', lunchNote: '', dinnerNote: '' };
 
     data[dateKey][member][field] = noteText;
     saveStorageData(data);
@@ -306,15 +303,14 @@
         var d = weekDates[i];
         var dateKey = formatDateKey(d);
         var mData = (data[dateKey] && data[dateKey][member]) ? data[dateKey][member] : {};
-        var status = mData.lunch;
         
-        var label = '未選択';
-        var cssClass = 'status-none';
+        // 未設定時はデフォルト「eat (食べる ⭕)」
+        var status = mData.lunch || 'eat';
+        
+        var label = '食べる ⭕';
+        var cssClass = 'status-eat';
 
-        if (status === 'eat') {
-          label = '食べる ⭕';
-          cssClass = 'status-eat';
-        } else if (status === 'no-eat') {
+        if (status === 'no-eat') {
           label = 'いらない ❌';
           cssClass = 'status-no-eat';
         }
@@ -332,15 +328,14 @@
         var d = weekDates[i];
         var dateKey = formatDateKey(d);
         var mData = (data[dateKey] && data[dateKey][member]) ? data[dateKey][member] : {};
-        var status = mData.dinner;
         
-        var label = '未選択';
-        var cssClass = 'status-none';
+        // 未設定時はデフォルト「eat (食べる ⭕)」
+        var status = mData.dinner || 'eat';
+        
+        var label = '食べる ⭕';
+        var cssClass = 'status-eat';
 
-        if (status === 'eat') {
-          label = '食べる ⭕';
-          cssClass = 'status-eat';
-        } else if (status === 'no-eat') {
+        if (status === 'no-eat') {
           label = 'いらない ❌';
           cssClass = 'status-no-eat';
         }
