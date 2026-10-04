@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>ごはん要否チェック</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ごはんチェック">
+  
+  <style>
+    :root {
+      --bg-color: #f2f2f7;
+      --card-bg: #ffffff;
+      --primary: #007aff;
+      --danger: #ff3b30;
+      --success: #34c759;
+      --text: #1c1c1e;
+      --border: #e5e5ea;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text);
+      margin: 0;
+      padding: 12px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .container { max-width: 950px; margin: 0 auto; }
+    h1 { font-size: 1.3rem; text-align: center; margin-bottom: 12px; }
+
+    .top-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 12px; background: var(--card-bg); padding: 10px 14px;
+      border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    .date-control { display: flex; align-items: center; gap: 8px; }
+    .date-control input[type="date"] {
+      font-size: 0.95rem; padding: 4px 8px; border: 1px solid var(--border); border-radius: 8px;
+    }
+    
+    .tab-btn {
+      padding: 6px 12px; border: none; background: #e3e3e8; font-weight: 600;
+      border-radius: 8px; cursor: pointer; color: #444; font-size: 0.85rem;
+    }
+    .tab-btn.active { background: var(--primary); color: white; }
+
+    .view-section { display: none; }
+    .view-section.active { display: block; }
+
+    .week-table-container {
+      overflow-x: auto; background: white; border-radius: 12px; padding: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    table { width: 100%; border-collapse: collapse; text-align: center; font-size: 0.85rem; min-width: 750px; }
+    th, td { padding: 8px 4px; border: 1px solid var(--border); vertical-align: top; }
+    th { background: #f8f8f9; color: #333; font-size: 0.8rem; }
+    .member-col { width: 80px; font-weight: bold; background: #fdfdfd; vertical-align: middle; }
+
+    .meal-cell-unit { display: flex; flex-direction: column; gap: 6px; padding: 2px; }
+    .meal-row {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      background: #f9f9fb; padding: 4px; border-radius: 6px;
+    }
+
+    .btn-toggle-sm {
+      border: none; color: white; padding: 4px 8px; border-radius: 12px;
+      font-size: 0.75rem; font-weight: bold; cursor: pointer; width: 100%; max-width: 75px;
+    }
+    .btn-toggle-sm.yes { background-color: var(--success); }
+    .btn-toggle-sm.no { background-color: var(--danger); }
+
+    .req-input-sm {
+      width: 90%; font-size: 0.7rem; padding: 3px 4px; border: 1px solid var(--border);
+      border-radius: 4px; margin-top: 2px; text-align: center; box-sizing: border-box;
+    }
+
+    .menu-header-input {
+      width: 90%; font-size: 0.7rem; padding: 2px 4px; border: 1px solid var(--border);
+      border-radius: 4px; margin-top: 2px; box-sizing: border-box;
+    }
+
+    .manage-card {
+      background: var(--card-bg); border-radius: 12px; padding: 16px; margin-bottom: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05); max-width: 500px; margin: 0 auto;
+    }
+    .add-member-form { display: flex; gap: 8px; margin-bottom: 16px; }
+    .add-member-form input { flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; }
+    .btn-primary { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    .member-manage-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .btn-danger { background: var(--danger); color: white; border: none; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
+  </style>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<div class="container">
+  <h1>🍚 1週間ごはん要否チェック</h1>
+
+  <div class="top-bar">
+    <div class="date-control">
+      <label for="startDate">開始日:</label>
+      <input type="date" id="startDate">
+    </div>
+    <button class="tab-btn" id="manageTabBtn" onclick="toggleManageView()">⚙ メンバー管理</button>
+  </div>
+
+  <div id="weeklyView" class="view-section active">
+    <div class="week-table-container">
+      <table>
+        <thead>
+          <tr id="weeklyHeader">
+            <th class="member-col">家族</th>
+          </tr>
+        </thead>
+        <tbody id="weeklyTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="manageView" class="view-section">
+    <div class="manage-card">
+      <h3>家族メンバーの追加・削除</h3>
+      <div class="add-member-form">
+        <input type="text" id="newMemberName" placeholder="名前を入力（例: おじいちゃん）">
+        <button class="btn-primary" onclick="addMember()">追加</button>
+      </div>
+      <div id="memberManageList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ★ Firebase設定情報（実際のキーを設定するまではローカル保存で動作します）
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  let database = null;
+  // Firebase設定が正しく入っているか判定
+  if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+    try {
+      firebase.initializeApp(firebaseConfig);
+      database = firebase.database();
+    } catch (e) {
+      console.warn("Firebase initialization failed:", e);
+    }
+  }
+
+  const defaultMembers = ['父', '母', '長男', '長女', '次男'];
+  let membersList = [];
+  const startDateInput = document.getElementById('startDate');
+
+  const today = new Date().toISOString().split('T')[0];
+  startDateInput.value = today;
+
+  let weekData = {};
+
+  // ローカルストレージ用ヘルパー
+  function getLocal(key, defaultVal) {
+    const val = localStorage.getItem(key);
+    return val ? JSON.parse(val) : defaultVal;
+  }
+  function setLocal(key, val) {
+    localStorage.setItem(key, JSON.stringify(val));
+  }
+
+  function init() {
+    if (database) {
+      database.ref('settings/members').on('value', (snapshot) => {
+        const val = snapshot.val();
+        membersList = (val && Array.isArray(val)) ? val : defaultMembers;
+        renderManageList();
+        loadWeeklyData();
+      });
+    } else {
+      membersList = getLocal('members', defaultMembers);
+      renderManageList();
+      loadWeeklyData();
+    }
+  }
+
+  function loadWeeklyData() {
+    const dates = get7Dates(startDateInput.value);
+
+    if (database) {
+      database.ref('meals').on('value', (snapshot) => {
+        weekData = snapshot.val() || {};
+        renderWeeklyTable(dates);
+      });
+    } else {
+      weekData = getLocal('meals', {});
+      renderWeeklyTable(dates);
+    }
+  }
+
+  function get7Dates(startStr) {
+    const dates = [];
+    const start = new Date(startStr);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      dates.push(d.toISOString().split('T')[0]);
+    }
+    return dates;
+  }
+
+  function renderWeeklyTable(dates) {
+    if (!dates || dates.length === 0) dates = get7Dates(startDateInput.value);
+
+    const headerRow = document.getElementById('weeklyHeader');
+    headerRow.innerHTML = '<th class="member-col">家族</th>';
+
+    dates.forEach(d => {
+      const dateObj = new Date(d);
+      const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()];
+      const label = `${dateObj.getMonth()+1}/${dateObj.getDate()} (${dayOfWeek})`;
+      const dayMenu = (weekData[d] && weekData[d].menu) || {};
+
+      headerRow.innerHTML += `
+        <th>
+          <div><strong>${label}</strong></div>
+          <input type="text" class="menu-header-input" placeholder="昼メニュー" 
+                 value="${dayMenu.lunch || ''}" 
+                 onchange="updateMenu('${d}', 'lunch', this.value)">
+          <input type="text" class="menu-header-input" placeholder="夜メニュー" 
+                 value="${dayMenu.dinner || ''}" 
+                 onchange="updateMenu('${d}', 'dinner', this.value)">
+        </th>
+      `;
+    });
+
+    const tbody = document.getElementById('weeklyTableBody');
+    tbody.innerHTML = '';
+
+    membersList.forEach(m => {
+      let rowHtml = `<tr><td class="member-col">${m}</td>`;
+      
+      dates.forEach(d => {
+        const mData = (weekData[d] && weekData[d].members && weekData[d].members[m]) || {};
+        const lunchActive = mData.lunch !== false;
+        const dinnerActive = mData.dinner !== false;
+
+        rowHtml += `
+          <td>
+            <div class="meal-cell-unit">
+              <div class="meal-row">
+                <button class="btn-toggle-sm ${lunchActive ? 'yes' : 'no'}" 
+                        onclick="toggleMeal('${d}', '${m}', 'lunch', ${lunchActive})">
+                  昼: ${lunchActive ? 'いる' : 'いらない'}
+                </button>
+                ${lunchActive ? `
+                  <input type="text" class="req-input-sm" placeholder="要望メモ" 
+                         value="${mData.lunchReq || ''}" 
+                         onchange="updateRequest('${d}', '${m}', 'lunchReq', this.value)">
+                ` : ''}
+              </div>
+
+              <div class="meal-row">
+                <button class="btn-toggle-sm ${dinnerActive ? 'yes' : 'no'}" 
+                        onclick="toggleMeal('${d}', '${m}', 'dinner', ${dinnerActive})">
+                  夜: ${dinnerActive ? 'いる' : 'いらない'}
+                </button>
+                ${dinnerActive ? `
+                  <input type="text" class="req-input-sm" placeholder="要望メモ" 
+                         value="${mData.dinnerReq || ''}" 
+                         onchange="updateRequest('${d}', '${m}', 'dinnerReq', this.value)">
+                ` : ''}
+              </div>
+            </div>
+          </td>
+        `;
+      });
+
+      rowHtml += '</tr>';
+      tbody.innerHTML += rowHtml;
+    });
+  }
+
+  window.toggleMeal = function(date, member, mealType, currentVal) {
+    if (database) {
+      database.ref(`meals/${date}/members/${member}/${mealType}`).set(!currentVal);
+    } else {
+      if (!weekData[date]) weekData[date] = {};
+      if (!weekData[date].members) weekData[date].members = {};
+      if (!weekData[date].members[member]) weekData[date].members[member] = {};
+      weekData[date].members[member][mealType] = !currentVal;
+      setLocal('meals', weekData);
+      renderWeeklyTable();
+    }
+  };
+
+  window.updateRequest = function(date, member, reqType, val) {
+    if (database) {
+      database.ref(`meals/${date}/members/${member}/${reqType}`).set(val);
+    } else {
+      if (!weekData[date]) weekData[date] = {};
+      if (!weekData[date].members) weekData[date].members = {};
+      if (!weekData[date].members[member]) weekData[date].members[member] = {};
+      weekData[date].members[member][reqType] = val;
+      setLocal('meals', weekData);
+    }
+  };
+
+  window.updateMenu = function(date, mealType, val) {
+    if (database) {
+      database.ref(`meals/${date}/menu/${mealType}`).set(val);
+    } else {
+      if (!weekData[date]) weekData[date] = {};
+      if (!weekData[date].menu) weekData[date].menu = {};
+      weekData[date].menu[mealType] = val;
+      setLocal('meals', weekData);
+    }
+  };
+
+  function toggleManageView() {
+    const weeklyView = document.getElementById('weeklyView');
+    const manageView = document.getElementById('manageView');
+    const btn = document.getElementById('manageTabBtn');
+
+    if (manageView.classList.contains('active')) {
+      manageView.classList.remove('active');
+      weeklyView.classList.add('active');
+      btn.classList.remove('active');
+      btn.textContent = '⚙ メンバー管理';
+    } else {
+      weeklyView.classList.remove('active');
+      manageView.classList.add('active');
+      btn.classList.add('active');
+      btn.textContent = '◀ 一覧に戻る';
+      renderManageList();
+    }
+  }
+
+  function renderManageList() {
+    const container = document.getElementById('memberManageList');
+    container.innerHTML = '';
+    membersList.forEach((member, index) => {
+      const item = document.createElement('div');
+      item.className = 'member-manage-item';
+      item.innerHTML = `
+        <span><strong>${member}</strong></span>
+        <button class="btn-danger" onclick="removeMember(${index})">削除</button>
+      `;
+      container.appendChild(item);
+    });
+  }
+
+  window.addMember = function() {
+    const input = document.getElementById('newMemberName');
+    const name = input.value.trim();
+    if (!name) return;
+    if (membersList.includes(name)) return alert("同じ名前のメンバーが存在します");
+
+    membersList.push(name);
+    if (database) {
+      database.ref('settings/members').set(membersList);
+    } else {
+      setLocal('members', membersList);
+      renderManageList();
+      loadWeeklyData();
+    }
+    input.value = '';
+  };
+
+  window.removeMember = function(index) {
+    if (!confirm(`${membersList[index]} さんを削除しますか？`)) return;
+    membersList.splice(index, 1);
+    if (database) {
+      database.ref('settings/members').set(membersList);
+    } else {
+      setLocal('members', membersList);
+      renderManageList();
+      loadWeeklyData();
+    }
+  };
+
+  startDateInput.addEventListener('change', loadWeeklyData);
+
+  init();
+</script>
+
+</body>
+</html>
